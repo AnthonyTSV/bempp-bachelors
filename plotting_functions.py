@@ -45,6 +45,7 @@ def plot_impedance(frequencies, impedances):
     """
     z_real = [z.real for z in impedances]
     z_imag = [z.imag for z in impedances]
+    plt.figure()
     plt.plot(frequencies, z_real, label='Resistance')
     plt.plot(frequencies, z_imag, label='Reactance')
 
@@ -59,14 +60,13 @@ def plot_s_param(frequencies, impedances):
     z_0 = 50 # ohms
     gamma = (impedances-z_0)/(impedances+z_0)
     s_param = -20*np.log10(gamma)
-
+    plt.figure()
     plt.plot(frequencies, s_param)
 
     plt.xlabel('Frequency (GHz)')
     plt.ylabel('S-Parameter, dB')
 
-def plot_squared_field_density(solved_system, div_space, wavenumber, nx=200, nz=200, v_max=5):
-    extent = 0.1
+def plot_squared_field_density(solved_system, div_space, wavenumber, nx=200, nz=200, v_max=5, extent=0.05):
     x, y, z = np.mgrid[-extent:extent:nx * 1j, 0:0:1j, -extent:extent:nz * 1j]
     points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
     el_field = bempp.api.operators.potential.maxwell.electric_field(div_space, points, wavenumber)

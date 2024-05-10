@@ -35,22 +35,15 @@ grid = bempp.api.import_grid(current+"/flat_dipole_mesh.msh")
 div_space = bempp.api.function_space(grid, "RWG", 0)
 curl_space = bempp.api.function_space(grid, "SNC", 0)
 
-# get edge
-source_edges = []
-for edges, dofs in zip(grid.element_edges.T, div_space.local2global):
-    for idx, edge_id in enumerate(edges):
-        vertex1 = grid.vertices[:, grid.edges[0,edge_id]]
-        vertex2 = grid.vertices[:, grid.edges[1,edge_id]]
-        if math.isclose(vertex1[2], 0, abs_tol=1e-4) and math.isclose(vertex2[2], 0, abs_tol=1e-4):
-            if dofs[idx] not in source_edges:
-                source_edges.append(dofs[idx])
+direction = np.array([1, 0, 0])
+polarization = np.array([0, 0, 1])
 
-assert source_edges
-coefficients=np.zeros(div_space.global_dof_count, dtype = 'complex')
-for source_edge in source_edges:
-    coefficients[source_edge] = voltage0
+@bempp.api.complex_callable(jit=False)
+def tangential_trace(x, n, domain_index, result):
+    value = np.array(polarization * np.exp(-1j * wavenumber * np.dot(x, direction)))
+    result[:] = np.cross(value, n, axis=0)
 
-trace_fun = bempp.api.GridFunction(div_space, coefficients= coefficients, dual_space=curl_space)
+trace_fun = bempp.api.GridFunction(div_space, fun=tangential_trace, dual_space=curl_space)
 
 
 impedances = []
@@ -67,13 +60,10 @@ for frequency in frequencies:
     solved_system = bempp.api.linalg.lu(efie, trace_fun)
 
 
-    current_raw = solved_system.coefficients[source_edges[0]]
-    impedance = voltage0 / current_raw
-    impedances.append(impedance)
-    currents_raw.append(current_raw)
+    print(max(solved_system.coefficients))
 
-plotting_functions.plot_squared_field_density(solved_system, div_space, wavenumber, v_max=0.1, extent=0.05)
-plotting_functions.plot_impedance(frequencies, impedances)
+plotting_functions.plot_squared_field_density(solved_system, div_space, wavenumber, v_max=5, extent=0.05)
+# plotting_functions.plot_impedance(frequencies, impedances)
 plotting_functions.plot_directivity(solved_system, div_space, wavenumber, plane="YZ")
 plotting_functions.plot_directivity(solved_system, div_space, wavenumber, plane="XZ")
 plotting_functions.plot_directivity(solved_system, div_space, wavenumber, plane="XY")
